@@ -1,7 +1,24 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { supabase } from './lib/supabase'
 
 function App() {
   const [menu, setMenu] = useState('Dashboard')
+  const [productos, setProductos] = useState([])
+  const [cargando, setCargando] = useState(false)
+  const [error, setError] = useState('')
+  const [mostrarFormulario, setMostrarFormulario] = useState(false)
+
+  const [form, setForm] = useState({
+    codigo: '',
+    codigo_de_barras: '',
+    nombre: '',
+    descripcion: '',
+    unidad_medida: '',
+    precio_compra: '',
+    precio_venta: '',
+    stock_minimo: '',
+    activo: true
+  })
 
   const menuItems = [
     'Dashboard',
@@ -14,6 +31,114 @@ function App() {
     'Proveedores',
     'Usuarios'
   ]
+
+  useEffect(() => {
+    if (menu === 'Productos') {
+      cargarProductos()
+    }
+  }, [menu])
+
+  async function cargarProductos() {
+    setCargando(true)
+    setError('')
+
+    if (!supabase) {
+      setError('Supabase no está configurado en la aplicación.')
+      setCargando(false)
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('productos')
+      .select('*')
+      .order('nombre', { ascending: true })
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setProductos(data || [])
+    }
+
+    setCargando(false)
+  }
+
+  function cambiarCampo(e) {
+    const { name, value, type, checked } = e.target
+
+    setForm({
+      ...form,
+      [name]: type === 'checkbox' ? checked : value
+    })
+  }
+
+  async function guardarProducto(e) {
+    e.preventDefault()
+    setError('')
+
+    if (!supabase) {
+      setError('Supabase no está configurado.')
+      return
+    }
+
+    if (!form.nombre.trim()) {
+      setError('El nombre del producto es obligatorio.')
+      return
+    }
+
+    const producto = {
+      codigo: form.codigo || null,
+      codigo_de_barras: form.codigo_de_barras || null,
+      nombre: form.nombre.trim(),
+      descripcion: form.descripcion || null,
+      unidad_medida: form.unidad_medida || null,
+      precio_compra: Number(form.precio_compra) || 0,
+      precio_venta: Number(form.precio_venta) || 0,
+      stock_minimo: Number(form.stock_minimo) || 0,
+      activo: form.activo
+    }
+
+    const { error } = await supabase
+      .from('productos')
+      .insert([producto])
+
+    if (error) {
+      setError(error.message)
+      return
+    }
+
+    setForm({
+      codigo: '',
+      codigo_de_barras: '',
+      nombre: '',
+      descripcion: '',
+      unidad_medida: '',
+      precio_compra: '',
+      precio_venta: '',
+      stock_minimo: '',
+      activo: true
+    })
+
+    setMostrarFormulario(false)
+    cargarProductos()
+  }
+
+  async function eliminarProducto(id) {
+    if (!window.confirm('¿Seguro que deseas eliminar este producto?')) {
+      return
+    }
+
+    const { error } = await supabase
+      .from('productos')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      setError(error.message)
+      return
+    }
+
+    cargarProductos()
+  }
 
   return (
     <div className="app">
@@ -61,12 +186,13 @@ function App() {
         </header>
 
         <section className="content">
-          {menu === 'Dashboard' ? (
+
+          {menu === 'Dashboard' && (
             <>
               <div className="cards">
                 <div className="card">
                   <span>Productos</span>
-                  <strong>0</strong>
+                  <strong>{productos.length}</strong>
                   <small>Productos registrados</small>
                 </div>
 
@@ -101,7 +227,174 @@ function App() {
                 </button>
               </div>
             </>
-          ) : (
+          )}
+
+          {menu === 'Productos' && (
+            <div className="products-module">
+
+              <div className="module-header">
+                <div>
+                  <h2>Productos</h2>
+                  <p>Administra los productos de tu negocio</p>
+                </div>
+
+                <button onClick={() => setMostrarFormulario(!mostrarFormulario)}>
+                  {mostrarFormulario ? 'Cerrar' : '+ Nuevo producto'}
+                </button>
+              </div>
+
+              {mostrarFormulario && (
+                <form onSubmit={guardarProducto} className="product-form">
+
+                  <input
+                    name="codigo"
+                    placeholder="Código"
+                    value={form.codigo}
+                    onChange={cambiarCampo}
+                  />
+
+                  <input
+                    name="codigo_de_barras"
+                    placeholder="Código de barras"
+                    value={form.codigo_de_barras}
+                    onChange={cambiarCampo}
+                  />
+
+                  <input
+                    name="nombre"
+                    placeholder="Nombre del producto *"
+                    value={form.nombre}
+                    onChange={cambiarCampo}
+                    required
+                  />
+
+                  <input
+                    name="descripcion"
+                    placeholder="Descripción"
+                    value={form.descripcion}
+                    onChange={cambiarCampo}
+                  />
+
+                  <input
+                    name="unidad_medida"
+                    placeholder="Unidad de medida"
+                    value={form.unidad_medida}
+                    onChange={cambiarCampo}
+                  />
+
+                  <input
+                    name="precio_compra"
+                    type="number"
+                    step="0.01"
+                    placeholder="Precio de compra"
+                    value={form.precio_compra}
+                    onChange={cambiarCampo}
+                  />
+
+                  <input
+                    name="precio_venta"
+                    type="number"
+                    step="0.01"
+                    placeholder="Precio de venta"
+                    value={form.precio_venta}
+                    onChange={cambiarCampo}
+                  />
+
+                  <input
+                    name="stock_minimo"
+                    type="number"
+                    placeholder="Stock mínimo"
+                    value={form.stock_minimo}
+                    onChange={cambiarCampo}
+                  />
+
+                  <label>
+                    <input
+                      name="activo"
+                      type="checkbox"
+                      checked={form.activo}
+                      onChange={cambiarCampo}
+                    />
+                    Producto activo
+                  </label>
+
+                  <button type="submit">
+                    Guardar producto
+                  </button>
+
+                </form>
+              )}
+
+              {error && (
+                <div className="error">
+                  {error}
+                </div>
+              )}
+
+              {cargando ? (
+                <div className="empty">
+                  Cargando productos...
+                </div>
+              ) : productos.length === 0 ? (
+                <div className="empty">
+                  <div className="empty-icon">+</div>
+                  <h2>No hay productos</h2>
+                  <p>
+                    Comienza agregando tu primer producto.
+                  </p>
+                </div>
+              ) : (
+                <div className="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Código</th>
+                        <th>Producto</th>
+                        <th>Unidad</th>
+                        <th>Compra</th>
+                        <th>Venta</th>
+                        <th>Stock mínimo</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {productos.map((producto) => (
+                        <tr key={producto.id}>
+                          <td>{producto.codigo || '-'}</td>
+                          <td>
+                            <strong>{producto.nombre}</strong>
+                          </td>
+                          <td>{producto.unidad_medida || '-'}</td>
+                          <td>
+                            ${Number(producto.precio_compra || 0).toFixed(2)}
+                          </td>
+                          <td>
+                            ${Number(producto.precio_venta || 0).toFixed(2)}
+                          </td>
+                          <td>{producto.stock_minimo || 0}</td>
+                          <td>
+                            {producto.activo ? 'Activo' : 'Inactivo'}
+                          </td>
+                          <td>
+                            <button
+                              onClick={() => eliminarProducto(producto.id)}
+                            >
+                              Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+            </div>
+          )}
+
+          {!['Dashboard', 'Productos'].includes(menu) && (
             <div className="empty">
               <div className="empty-icon">+</div>
               <h2>{menu}</h2>
@@ -110,6 +403,7 @@ function App() {
               </p>
             </div>
           )}
+
         </section>
       </main>
     </div>
