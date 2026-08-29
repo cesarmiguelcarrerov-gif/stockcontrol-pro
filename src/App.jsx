@@ -216,7 +216,7 @@ function App() {
               </div>
 
               <div className="welcome">
-                <h2>Bienvenido a StockControl PRO</h2>
+                <h2>Bienvenido a StockControl PRO </h2>
                 <p>
                   Administra productos, inventario, compras, ventas y
                   movimientos desde un solo lugar.
