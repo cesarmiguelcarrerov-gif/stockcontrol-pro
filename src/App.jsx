@@ -10,7 +10,7 @@ function App() {
 
   const [form, setForm] = useState({
     codigo: '',
-    codigo_de_barras: '',
+    codigo_barras: '',
     nombre: '',
     descripcion: '',
     unidad_medida: '',
@@ -87,7 +87,7 @@ function App() {
 
     const producto = {
       codigo: form.codigo || null,
-      codigo_de_barras: form.codigo_de_barras || null,
+      codigo_barras: form.codigo_barras || null,
       nombre: form.nombre.trim(),
       descripcion: form.descripcion || null,
       unidad_medida: form.unidad_medida || null,
@@ -108,7 +108,7 @@ function App() {
 
     setForm({
       codigo: '',
-      codigo_de_barras: '',
+      codigo_barras: '',
       nombre: '',
       descripcion: '',
       unidad_medida: '',
