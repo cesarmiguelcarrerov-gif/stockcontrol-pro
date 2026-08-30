@@ -1,6 +1,86 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 
+function Inventario() {
+  const [inventario, setInventario] = useState([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    cargarInventario()
+  }, [])
+
+  async function cargarInventario() {
+    const { data, error } = await supabase
+      .from('inventario')
+      .select(`
+        id,
+        stock,
+        stock_reservado,
+        stock_disponible,
+        productos (
+          codigo,
+          nombre
+        ),
+        sucursales (
+          nombre
+        )
+      `)
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setInventario(data || [])
+    }
+
+    setCargando(false)
+  }
+
+  return (
+    <div className="products-module">
+      <div className="module-header">
+        <div>
+          <h2>Inventario</h2>
+          <p>Existencias por producto y sucursal</p>
+        </div>
+      </div>
+
+      {error && <div className="error">{error}</div>}
+
+      {cargando ? (
+        <div className="empty">Cargando inventario...</div>
+      ) : (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Sucursal</th>
+                <th>Stock</th>
+                <th>Reservado</th>
+                <th>Disponible</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {inventario.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.productos?.codigo || '-'}</td>
+                  <td>{item.productos?.nombre || '-'}</td>
+                  <td>{item.sucursales?.nombre || '-'}</td>
+                  <td>{item.stock || 0}</td>
+                  <td>{item.stock_reservado || 0}</td>
+                  <td>{item.stock_disponible || 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
 function App() {
   const [menu, setMenu] = useState('Dashboard')
   const [productos, setProductos] = useState([])
@@ -394,6 +474,7 @@ function App() {
             </div>
           )}
 
+          {menu === 'Inventario' && <Inventario />}
           {!['Dashboard', 'Productos'].includes(menu) && (
             <div className="empty">
               <div className="empty-icon">+</div>
