@@ -8,52 +8,56 @@ function Inventario() {
 
   useEffect(() => {
     cargarInventario()
+  }, [])
+
   async function cargarInventario() {
-  setCargando(true)
-  setError('')
+    setCargando(true)
+    setError('')
 
-  if (!supabase) {
-    setError('Supabase no está configurado.')
+    if (!supabase) {
+      setError('Supabase no está configurado.')
+      setCargando(false)
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('inventario')
+      .select(
+        'id, producto_id, sucursal_id, stock, stock_reservado, stock_disponible'
+      )
+
+    if (error) {
+      setError(error.message)
+      setCargando(false)
+      return
+    }
+
+    const inventarioConNombres = await Promise.all(
+      (data || []).map(async (item) => {
+        const { data: producto } = await supabase
+          .from('productos')
+          .select('codigo, nombre')
+          .eq('id', item.producto_id)
+          .single()
+
+        const { data: sucursal } = await supabase
+          .from('sucursales')
+          .select('nombre')
+          .eq('id', item.sucursal_id)
+          .single()
+
+        return {
+          ...item,
+          producto_codigo: producto?.codigo || '-',
+          producto_nombre: producto?.nombre || 'Sin producto',
+          sucursal_nombre: sucursal?.nombre || 'Sin sucursal'
+        }
+      })
+    )
+
+    setInventario(inventarioConNombres)
     setCargando(false)
-    return
   }
-
-  const { data, error } = await supabase
-    .from('inventario')
-    .select('id, producto_id, sucursal_id, stock, stock_reservado, stock_disponible')
-
-  if (error) {
-    setError(error.message)
-    setCargando(false)
-    return
-  }
-
-  const inventarioConNombres = await Promise.all(
-    (data || []).map(async (item) => {
-      const { data: producto } = await supabase
-        .from('productos')
-        .select('codigo, nombre')
-        .eq('id', item.producto_id)
-        .single()
-
-      const { data: sucursal } = await supabase
-        .from('sucursales')
-        .select('nombre')
-        .eq('id', item.sucursal_id)
-        .single()
-
-      return {
-        ...item,
-        producto_codigo: producto?.codigo || '-',
-        producto_nombre: producto?.nombre || 'Sin producto',
-        sucursal_nombre: sucursal?.nombre || 'Sin sucursal'
-      }
-    })
-  )
-
-  setInventario(inventarioConNombres)
-  setCargando(false)
-}
 
   return (
     <div className="products-module">
@@ -67,7 +71,15 @@ function Inventario() {
       {error && <div className="error">{error}</div>}
 
       {cargando ? (
-        <div className="empty">Cargando inventario...</div>
+        <div className="empty">
+          <h2>Cargando inventario...</h2>
+        </div>
+      ) : inventario.length === 0 ? (
+        <div className="empty">
+          <div className="empty-icon">+</div>
+          <h2>Inventario vacío</h2>
+          <p>No hay existencias registradas todavía.</p>
+        </div>
       ) : (
         <div className="table-container">
           <table>
@@ -86,7 +98,9 @@ function Inventario() {
               {inventario.map((item) => (
                 <tr key={item.id}>
                   <td>{item.producto_codigo}</td>
-                  <td>{item.producto_nombre}</td>
+                  <td>
+                    <strong>{item.producto_nombre}</strong>
+                  </td>
                   <td>{item.sucursal_nombre}</td>
                   <td>{item.stock || 0}</td>
                   <td>{item.stock_reservado || 0}</td>
@@ -100,6 +114,7 @@ function Inventario() {
     </div>
   )
 }
+
 function App() {
   const [menu, setMenu] = useState('Dashboard')
   const [productos, setProductos] = useState([])
@@ -244,6 +259,7 @@ function App() {
       <aside className="sidebar">
         <div className="logo">
           <div className="logo-icon">SC</div>
+
           <div>
             <strong>StockControl</strong>
             <span>PRO</span>
@@ -277,6 +293,7 @@ function App() {
 
           <div className="user">
             <div className="avatar">CC</div>
+
             <div>
               <strong>Administrador</strong>
               <small>Usuario principal</small>
@@ -315,7 +332,8 @@ function App() {
               </div>
 
               <div className="welcome">
-                <h2>Bienvenido a StockControl PRO </h2>
+                <h2>Bienvenido a StockControl PRO</h2>
+
                 <p>
                   Administra productos, inventario, compras, ventas y
                   movimientos desde un solo lugar.
@@ -337,13 +355,22 @@ function App() {
                   <p>Administra los productos de tu negocio</p>
                 </div>
 
-                <button onClick={() => setMostrarFormulario(!mostrarFormulario)}>
-                  {mostrarFormulario ? 'Cerrar' : '+ Nuevo producto'}
+                <button
+                  onClick={() =>
+                    setMostrarFormulario(!mostrarFormulario)
+                  }
+                >
+                  {mostrarFormulario
+                    ? 'Cerrar'
+                    : '+ Nuevo producto'}
                 </button>
               </div>
 
               {mostrarFormulario && (
-                <form onSubmit={guardarProducto} className="product-form">
+                <form
+                  onSubmit={guardarProducto}
+                  className="product-form"
+                >
 
                   <input
                     name="codigo"
@@ -353,9 +380,9 @@ function App() {
                   />
 
                   <input
-                    name="codigo_de_barras"
+                    name="codigo_barras"
                     placeholder="Código de barras"
-                    value={form.codigo_de_barras}
+                    value={form.codigo_barras}
                     onChange={cambiarCampo}
                   />
 
@@ -437,7 +464,9 @@ function App() {
               ) : productos.length === 0 ? (
                 <div className="empty">
                   <div className="empty-icon">+</div>
+
                   <h2>No hay productos</h2>
+
                   <p>
                     Comienza agregando tu primer producto.
                   </p>
@@ -461,28 +490,57 @@ function App() {
                     <tbody>
                       {productos.map((producto) => (
                         <tr key={producto.id}>
-                          <td>{producto.codigo || '-'}</td>
+
                           <td>
-                            <strong>{producto.nombre}</strong>
+                            {producto.codigo || '-'}
                           </td>
-                          <td>{producto.unidad_medida || '-'}</td>
+
                           <td>
-                            ${Number(producto.precio_compra || 0).toFixed(2)}
+                            <strong>
+                              {producto.nombre}
+                            </strong>
                           </td>
+
                           <td>
-                            ${Number(producto.precio_venta || 0).toFixed(2)}
+                            {producto.unidad_medida || '-'}
                           </td>
-                          <td>{producto.stock_minimo || 0}</td>
+
                           <td>
-                            {producto.activo ? 'Activo' : 'Inactivo'}
+                            $
+                            {Number(
+                              producto.precio_compra || 0
+                            ).toFixed(2)}
                           </td>
+
+                          <td>
+                            $
+                            {Number(
+                              producto.precio_venta || 0
+                            ).toFixed(2)}
+                          </td>
+
+                          <td>
+                            {producto.stock_minimo || 0}
+                          </td>
+
+                          <td>
+                            {producto.activo
+                              ? 'Activo'
+                              : 'Inactivo'}
+                          </td>
+
                           <td>
                             <button
-                              onClick={() => eliminarProducto(producto.id)}
+                              onClick={() =>
+                                eliminarProducto(
+                                  producto.id
+                                )
+                              }
                             >
                               Eliminar
                             </button>
                           </td>
+
                         </tr>
                       ))}
                     </tbody>
@@ -494,10 +552,17 @@ function App() {
           )}
 
           {menu === 'Inventario' && <Inventario />}
-          {!['Dashboard', 'Productos'].includes(menu) && (
+
+          {![
+            'Dashboard',
+            'Productos',
+            'Inventario'
+          ].includes(menu) && (
             <div className="empty">
               <div className="empty-icon">+</div>
+
               <h2>{menu}</h2>
+
               <p>
                 Este módulo estará disponible en la siguiente etapa.
               </p>
