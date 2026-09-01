@@ -10,3 +10,4 @@ if (URL && KEY) {
 }
 
 export { supabase }
+
