@@ -40,9 +40,9 @@ function Inventario() {
 
       return {
         ...item,
-        producto_codigo: producto.data?.codigo || '-',
-        producto_nombre: producto.data?.nombre || 'Sin producto',
-        sucursal_nombre: sucursal.data?.nombre || 'Sin sucursal'
+        <td>{item.producto_codigo}</td>
+        <td>{item.producto_nombre}</td>
+        <td>{item.sucursal_nombre}</td>
       }
     })
   )
