@@ -8,35 +8,52 @@ function Inventario() {
 
   useEffect(() => {
     cargarInventario()
-  }, [])
-
   async function cargarInventario() {
-    const { data, error } = await supabase
-      .from('inventario')
-      .select(`
-  id,
-  producto_id,
-  sucursal_id,
-  stock,
-  stock_reservado,
-  stock_disponible,
-  productos:producto_id (
-    codigo,
-    nombre
-  ),
-  sucursales:sucursal_id (
-    nombre
-  )
-`)
+  setCargando(true)
+  setError('')
 
-    if (error) {
-      setError(error.message)
-    } else {
-      setInventario(data || [])
-    }
-
+  if (!supabase) {
+    setError('Supabase no está configurado.')
     setCargando(false)
+    return
   }
+
+  const { data, error } = await supabase
+    .from('inventario')
+    .select('id, producto_id, sucursal_id, stock, stock_reservado, stock_disponible')
+
+  if (error) {
+    setError(error.message)
+    setCargando(false)
+    return
+  }
+
+  const inventarioConNombres = await Promise.all(
+    (data || []).map(async (item) => {
+      const { data: producto } = await supabase
+        .from('productos')
+        .select('codigo, nombre')
+        .eq('id', item.producto_id)
+        .single()
+
+      const { data: sucursal } = await supabase
+        .from('sucursales')
+        .select('nombre')
+        .eq('id', item.sucursal_id)
+        .single()
+
+      return {
+        ...item,
+        producto_codigo: producto?.codigo || '-',
+        producto_nombre: producto?.nombre || 'Sin producto',
+        sucursal_nombre: sucursal?.nombre || 'Sin sucursal'
+      }
+    })
+  )
+
+  setInventario(inventarioConNombres)
+  setCargando(false)
+}
 
   return (
     <div className="products-module">
@@ -68,9 +85,9 @@ function Inventario() {
             <tbody>
               {inventario.map((item) => (
                 <tr key={item.id}>
-                  <td>{item.productos?.codigo || '-'}</td>
-                  <td>{item.productos?.nombre || '-'}</td>
-                  <td>{item.sucursales?.nombre || '-'}</td>
+                  <td>{item.producto_codigo}</td>
+                  <td>{item.producto_nombre}</td>
+                  <td>{item.sucursal_nombre}</td>
                   <td>{item.stock || 0}</td>
                   <td>{item.stock_reservado || 0}</td>
                   <td>{item.stock_disponible || 0}</td>
