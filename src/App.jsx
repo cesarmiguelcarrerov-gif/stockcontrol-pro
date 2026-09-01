@@ -1,3 +1,4 @@
+```jsx
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 
@@ -11,47 +12,28 @@ function Inventario() {
   }, [])
 
   async function cargarInventario() {
-  setCargando(true)
-  setError('')
+    setCargando(true)
+    setError('')
 
-  const { data, error } = await supabase
-    .from('inventario')
-    .select('id, producto_id, sucursal_id, stock, stock_reservado, stock_disponible')
+    if (!supabase) {
+      setError('Supabase no está configurado en la aplicación.')
+      setCargando(false)
+      return
+    }
 
-  if (error) {
-    setError(error.message)
-    setCargando(false)
-    return
-  }
+    const { data, error } = await supabase
+      .from('inventario')
+      .select(
+        'id, producto_id, sucursal_id, stock, stock_reservado, stock_disponible'
+      )
 
-  const resultado = await Promise.all(
-    (data || []).map(async (item) => {
-      const producto = await supabase
-        .from('productos')
-        .select('codigo, nombre')
-        .eq('id', item.producto_id)
-        .single()
+    if (error) {
+      setError(error.message)
+      setCargando(false)
+      return
+    }
 
-      const sucursal = await supabase
-        .from('sucursales')
-        .select('nombre')
-        .eq('id', item.sucursal_id)
-        .single()
-
-      return {
-        ...item,
-        <td>{item.producto_codigo}</td>
-        <td>{item.producto_nombre}</td>
-        <td>{item.sucursal_nombre}</td>
-      }
-    })
-  )
-
-  setInventario(resultado)
-  setCargando(false)
-}
-
-    const inventarioConNombres = await Promise.all(
+    const resultado = await Promise.all(
       (data || []).map(async (item) => {
         const { data: producto } = await supabase
           .from('productos')
@@ -66,16 +48,15 @@ function Inventario() {
           .single()
 
         return {
-  ...item,
-  producto_codigo: producto.data?.codigo || '-',
-  producto_nombre: producto.data?.nombre || 'Sin producto',
-  sucursal_nombre: sucursal.data?.nombre || 'Sin sucursal'
-}
+          ...item,
+          producto_codigo: producto?.codigo || '-',
+          producto_nombre: producto?.nombre || 'Sin producto',
+          sucursal_nombre: sucursal?.nombre || 'Sin sucursal'
         }
       })
     )
 
-    setInventario(inventarioConNombres)
+    setInventario(resultado)
     setCargando(false)
   }
 
@@ -118,12 +99,17 @@ function Inventario() {
               {inventario.map((item) => (
                 <tr key={item.id}>
                   <td>{item.producto_codigo}</td>
+
                   <td>
                     <strong>{item.producto_nombre}</strong>
                   </td>
+
                   <td>{item.sucursal_nombre}</td>
+
                   <td>{item.stock || 0}</td>
+
                   <td>{item.stock_reservado || 0}</td>
+
                   <td>{item.stock_disponible || 0}</td>
                 </tr>
               ))}
@@ -261,6 +247,11 @@ function App() {
       return
     }
 
+    if (!supabase) {
+      setError('Supabase no está configurado.')
+      return
+    }
+
     const { error } = await supabase
       .from('productos')
       .delete()
@@ -322,7 +313,6 @@ function App() {
         </header>
 
         <section className="content">
-
           {menu === 'Dashboard' && (
             <>
               <div className="cards">
@@ -368,7 +358,6 @@ function App() {
 
           {menu === 'Productos' && (
             <div className="products-module">
-
               <div className="module-header">
                 <div>
                   <h2>Productos</h2>
@@ -391,7 +380,6 @@ function App() {
                   onSubmit={guardarProducto}
                   className="product-form"
                 >
-
                   <input
                     name="codigo"
                     placeholder="Código"
@@ -467,7 +455,6 @@ function App() {
                   <button type="submit">
                     Guardar producto
                   </button>
-
                 </form>
               )}
 
@@ -510,7 +497,6 @@ function App() {
                     <tbody>
                       {productos.map((producto) => (
                         <tr key={producto.id}>
-
                           <td>
                             {producto.codigo || '-'}
                           </td>
@@ -560,14 +546,12 @@ function App() {
                               Eliminar
                             </button>
                           </td>
-
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               )}
-
             </div>
           )}
 
@@ -588,7 +572,6 @@ function App() {
               </p>
             </div>
           )}
-
         </section>
       </main>
     </div>
@@ -596,3 +579,4 @@ function App() {
 }
 
 export default App
+```
