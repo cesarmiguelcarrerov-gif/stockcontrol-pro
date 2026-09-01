@@ -121,6 +121,7 @@ function Inventario() {
 }
 
 function App() {
+  console.log('STOCKCONTROL APP INICIANDO')
   const [menu, setMenu] = useState('Dashboard')
   const [productos, setProductos] = useState([])
   const [cargando, setCargando] = useState(false)
