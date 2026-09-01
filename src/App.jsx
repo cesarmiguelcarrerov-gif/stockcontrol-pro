@@ -11,26 +11,45 @@ function Inventario() {
   }, [])
 
   async function cargarInventario() {
-    setCargando(true)
-    setError('')
+  setCargando(true)
+  setError('')
 
-    if (!supabase) {
-      setError('Supabase no está configurado.')
-      setCargando(false)
-      return
-    }
+  const { data, error } = await supabase
+    .from('inventario')
+    .select('id, producto_id, sucursal_id, stock, stock_reservado, stock_disponible')
 
-    const { data, error } = await supabase
-      .from('inventario')
-      .select(
-        'id, producto_id, sucursal_id, stock, stock_reservado, stock_disponible'
-      )
+  if (error) {
+    setError(error.message)
+    setCargando(false)
+    return
+  }
 
-    if (error) {
-      setError(error.message)
-      setCargando(false)
-      return
-    }
+  const resultado = await Promise.all(
+    (data || []).map(async (item) => {
+      const producto = await supabase
+        .from('productos')
+        .select('codigo, nombre')
+        .eq('id', item.producto_id)
+        .single()
+
+      const sucursal = await supabase
+        .from('sucursales')
+        .select('nombre')
+        .eq('id', item.sucursal_id)
+        .single()
+
+      return {
+        ...item,
+        producto_codigo: producto.data?.codigo || '-',
+        producto_nombre: producto.data?.nombre || 'Sin producto',
+        sucursal_nombre: sucursal.data?.nombre || 'Sin sucursal'
+      }
+    })
+  )
+
+  setInventario(resultado)
+  setCargando(false)
+}
 
     const inventarioConNombres = await Promise.all(
       (data || []).map(async (item) => {
@@ -48,9 +67,9 @@ function Inventario() {
 
         return {
           ...item,
-          producto_codigo: producto?.codigo || '-',
-          producto_nombre: producto?.nombre || 'Sin producto',
-          sucursal_nombre: sucursal?.nombre || 'Sin sucursal'
+          <td>{item.producto_codigo}</td>
+<td>{item.producto_nombre}</td>
+<td>{item.sucursal_nombre}</td>
         }
       })
     )
