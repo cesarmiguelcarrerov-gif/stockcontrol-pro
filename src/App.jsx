@@ -14,18 +14,20 @@ function Inventario() {
     const { data, error } = await supabase
       .from('inventario')
       .select(`
-        id,
-        stock,
-        stock_reservado,
-        stock_disponible,
-        productos (
-          codigo,
-          nombre
-        ),
-        sucursales (
-          nombre
-        )
-      `)
+  id,
+  producto_id,
+  sucursal_id,
+  stock,
+  stock_reservado,
+  stock_disponible,
+  productos:producto_id (
+    codigo,
+    nombre
+  ),
+  sucursales:sucursal_id (
+    nombre
+  )
+`)
 
     if (error) {
       setError(error.message)
